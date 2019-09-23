@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<GenRoBag>
+	<db dbname="testmultidb"/>
+
+	<packages>
+		<gnrcore_sys pkgcode="gnrcore:sys"/>
+		<gnrcore_adm pkgcode="gnrcore:adm"/>
+		<gnrcore_multidb pkgcode="gnrcore:multidb"/>
+		<base/>
+	</packages>
+
+	<authentication pkg="gnrcore:sys">
+		<py_auth defaultTags="user" method="authenticate" pkg="adm"/>
+	</authentication>
+</GenRoBag>
