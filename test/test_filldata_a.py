@@ -21,6 +21,10 @@ class TestFillMultidbData:
         cls.product_type_rec_1 = dict(description='Type One')
         cls.product_type_rec_2 = dict(description='Type Two',__multidb_default_subscribed=True)
         cls.product_type_rec_3 = dict(description='Type Three')
+
+        cls.product_category_1 = dict(code='C1',description='Cat.1')
+        cls.product_category_2 = dict(code='C2',description='Cat.2')
+
         subscription_tbl = cls.db.table('multidb.subscription')
         cls.subscription_tbl = subscription_tbl
 
@@ -28,6 +32,10 @@ class TestFillMultidbData:
         divtable = self.db.table('base.division')
         divtable.insert(dict(code='div_a',name='Albuquerque'))
         divtable.insert(dict(code='div_b',name='Boston'))
+        product_cat = self.db.table('base.product_category')
+        product_cat.insert(self.product_category_1)
+        product_cat.insert(self.product_category_2)
+
         self.db.commit()
         assert 'div_a' in self.db.dbstores,'Add store did not work'
 
@@ -78,6 +86,21 @@ class TestFillMultidbData:
             with pytest.raises(cli_type.multidbExceptionClass()):
                 cli_type.delete(f[0]['id'])
 
+    def test_sync_all_updatepkey(self):
+        product_cat = self.db.table('base.product_category')
+        countmain = product_cat.query().count()
+        with product_cat.recordToUpdate(self.product_category_1['code']) as rec:
+            rec['code'] = 'CA'
+        self.db.commit()
+        
+        with self.db.tempEnv(storename='div_a'):
+            countslave = product_cat.query().count()
+            assert countmain==countslave, 'it should not insert if update a pkey'
+            rec_updated = product_cat.record(description='Cat.1').output('dict')
+            assert rec_updated['code']=='CA','PKEY Code should be updated in slave store'
+
+
+
     def test_sync_partial_default_subscription(self):
         product_type_tbl = self.db.table('base.product_type')
         product_type_tbl.insert(self.product_type_rec_1)
@@ -111,7 +134,8 @@ class TestFillMultidbData:
         product_tbl = self.db.table('base.product')
         product_type_tbl.insert(self.product_type_rec_3)
         product_type_id = self.product_type_rec_3['id']
-        product_rec = dict(code='T1',description='Test One',product_type_id=product_type_id)
+        product_rec = dict(code='T1',description='Test One',
+                            product_type_id=product_type_id)
         product_tbl.insert(product_rec)
         self.db.commit()
         product_tbl.multidbSubscribe(product_rec['id'],dbstore='div_b')
